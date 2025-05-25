@@ -5,25 +5,12 @@
 #include <vector>
 #include <fstream>
 
-#include "../common/common.hpp"
-
-std::string getKernelCode(const char *file_name)
-{
-    std::ifstream kernel_file(file_name);
-    std::string output, line;
-
-    while (std::getline(kernel_file, line))
-    {
-        output += line += "\n";
-    }
-
-    kernel_file.close();
-
-    return output;
-}
+#include "../common/include/common.hpp"
+#include "../common/include/OCLTools.hpp"
 
 int main()
 {
+    OCLTools ocl_tools;
     std::vector<cl::Platform> available_platforms;
     cl::Platform::get(&available_platforms);
     if (available_platforms.size() == 0)
@@ -60,7 +47,7 @@ int main()
     // Selecting device
     cl::Device default_device = available_devices.at(0);
 
-    std::cout << "Using '" << default_device.getInfo<CL_DEVICE_NAME>() << "' of platform '" << default_platform.getInfo<CL_PLATFORM_NAME>() << "'" << std::endl;
+    std::cout << "Using '" << default_device.getInfo<CL_DEVICE_NAME>() << "' of platform '" << default_device.getInfo<CL_DEVICE_PLATFORM>().getInfo<CL_PLATFORM_NAME>() << "'" << std::endl;
 
     // Creating context with selected device
     cl::Context context(default_device);
@@ -75,7 +62,7 @@ int main()
     // Creating program
     cl::Program::Sources sources;
 
-    sources.push_back(getKernelCode("kernel.cl"));
+    sources.push_back(ocl_tools.getKernelCode("kernel.cl"));
 
     cl::Program program(context, sources);
 
@@ -97,7 +84,7 @@ int main()
 
     // Reading output
     CHECK_ERROR(queue.enqueueReadBuffer(output_buffer, CL_TRUE, 0, sizeof(char) * size, output));
-    
+
     std::cout << "\nOutput: " << output << std::endl;
 
     // Cleaning up
