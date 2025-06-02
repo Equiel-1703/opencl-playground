@@ -12,7 +12,6 @@ void OCLInterface::createCommandQueue()
     this->command_queue = cl::CommandQueue(this->context, this->selected_device);
 }
 
-
 std::string OCLInterface::getKernelCode(const char *file_name)
 {
     std::ifstream kernel_file(file_name);
@@ -67,7 +66,7 @@ void OCLInterface::selectDefaultPlatform()
     this->selectPlatform(platforms[0]);
 }
 
-std::vector<cl::Device> OCLInterface::getAvailableDevices(cl_device_type device_type = CL_DEVICE_TYPE_ALL)
+std::vector<cl::Device> OCLInterface::getAvailableDevices(cl_device_type device_type)
 {
     if (this->selected_platform() == nullptr)
     {
@@ -95,9 +94,9 @@ void OCLInterface::selectDevice(cl::Device d)
     std::cout << "Selected OpenCL device: " << this->selected_device.getInfo<CL_DEVICE_NAME>() << std::endl;
 }
 
-void OCLInterface::selectDefaultDevice()
+void OCLInterface::selectDefaultDevice(cl_device_type device_type)
 {
-    std::vector<cl::Device> devices = this->getAvailableDevices();
+    std::vector<cl::Device> devices = this->getAvailableDevices(device_type);
 
     if (devices.empty())
     {
@@ -137,25 +136,34 @@ cl::Kernel OCLInterface::createKernel(const cl::Program &program, const char *ke
     return kernel;
 }
 
-void OCLInterface::executeKernel(cl::Kernel &kernel, const std::vector<cl::Buffer> &buffers, const cl::NDRange &global_range, const cl::NDRange &local_range)
+cl::Buffer OCLInterface::createBuffer(size_t size, cl_mem_flags flags, void *host_ptr)
 {
-    for (size_t i = 0; i < buffers.size(); ++i)
+    cl::Buffer buffer(this->context, flags, size, host_ptr);
+
+    if (buffer() == nullptr)
     {
-        kernel.setArg(static_cast<cl_uint>(i), buffers.at(i));
+        std::cerr << "ERROR: Failed to create OpenCL buffer of size " << size << "." << std::endl;
+        throw std::runtime_error("Failed to create OpenCL buffer");
     }
 
+    std::cout << "OpenCL buffer of size " << size << " created successfully." << std::endl;
+    return buffer;
+}
+
+void OCLInterface::executeKernel(cl::Kernel &kernel, const cl::NDRange &global_range, const cl::NDRange &local_range)
+{
     this->command_queue.enqueueNDRangeKernel(kernel, cl::NullRange, global_range, local_range);
     this->command_queue.finish();
 
     std::cout << "OpenCL kernel executed successfully." << std::endl;
 }
 
-void OCLInterface::readBuffer(const cl::Buffer &buffer, void *ptr, size_t size)
+void OCLInterface::readBuffer(const cl::Buffer &buffer, void *host_ptr, size_t size)
 {
-    this->command_queue.enqueueReadBuffer(buffer, CL_TRUE, 0, size, ptr);
+    this->command_queue.enqueueReadBuffer(buffer, CL_TRUE, 0, size, host_ptr);
 }
 
-void OCLInterface::writeBuffer(const cl::Buffer &buffer, const void *ptr, size_t size)
+void OCLInterface::writeBuffer(const cl::Buffer &buffer, const void *host_ptr, size_t size)
 {
-    this->command_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, size, ptr);
+    this->command_queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, size, host_ptr);
 }
