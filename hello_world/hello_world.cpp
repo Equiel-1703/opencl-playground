@@ -6,11 +6,30 @@
 #include <fstream>
 
 #include "../common/include/common.hpp"
-#include "../common/include/OCLTools.hpp"
+
+std::string getKernelCode(const char *file_name)
+{
+    std::ifstream kernel_file(file_name);
+    std::string output, line;
+
+    if (!kernel_file.is_open())
+    {
+        std::cerr << "ERROR: Unable to open kernel file '" << file_name << "'." << std::endl;
+        throw std::runtime_error("Kernel file not found");
+    }
+
+    while (std::getline(kernel_file, line))
+    {
+        output += line += "\n";
+    }
+
+    kernel_file.close();
+
+    return output;
+}
 
 int main()
 {
-    OCLTools ocl_tools;
     std::vector<cl::Platform> available_platforms;
     cl::Platform::get(&available_platforms);
     if (available_platforms.size() == 0)
@@ -62,7 +81,7 @@ int main()
     // Creating program
     cl::Program::Sources sources;
 
-    sources.push_back(ocl_tools.getKernelCode("kernel.cl"));
+    sources.push_back(getKernelCode("kernel.cl"));
 
     cl::Program program(context, sources);
 
