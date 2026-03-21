@@ -40,34 +40,29 @@ int main()
     {
         std::cout << "\t- " << i.getInfo<CL_PLATFORM_NAME>() << std::endl;
     }
-
+    
     // Selecting platform
     cl::Platform default_platform = available_platforms.at(0);
+    std::cout << "First platform selected." << std::endl;
 
-    // Check available GPU devices
-    std::vector<cl::Device> available_devices, available_cpus;
-    default_platform.getDevices(CL_DEVICE_TYPE_GPU, &available_devices);
-    default_platform.getDevices(CL_DEVICE_TYPE_CPU, &available_cpus);
+    // Check available GPU devices in first platform and select it if exists. 
+    std::vector<cl::Device> available_gpus;
+    default_platform.getDevices(CL_DEVICE_TYPE_GPU, &available_gpus);
 
-    if (available_devices.size() == 0)
+    if (available_gpus.size() == 0)
     {
-        std::cerr << "Sorry, looks like this platform doesn't have any GPU. Exiting" << std::endl;
+        std::cerr << "Sorry, looks like this platform doesn't have any GPUs. Exiting" << std::endl;
         exit(EXIT_FAILURE);
     }
 
     std::cout << "Available GPUs in platform '" << default_platform.getInfo<CL_PLATFORM_NAME>() << "':" << std::endl;
-    for (auto &i : available_devices)
+    for (auto &i : available_gpus)
     {
-        std::cout << "\t- " << i.getInfo<CL_DEVICE_NAME>() << std::endl;
-    }
-    
-    std::cout << "Available CPUs in platform '" << default_platform.getInfo<CL_PLATFORM_NAME>() << "':" << std::endl;
-    for (auto &i : available_cpus)    {
         std::cout << "\t- " << i.getInfo<CL_DEVICE_NAME>() << std::endl;
     }
 
     // Selecting device
-    cl::Device default_device = available_devices.at(0);
+    cl::Device default_device = available_gpus.at(0);
 
     std::cout << "Using '" << default_device.getInfo<CL_DEVICE_NAME>() << "' of platform '" << default_platform.getInfo<CL_PLATFORM_NAME>() << "'" << std::endl;
 
