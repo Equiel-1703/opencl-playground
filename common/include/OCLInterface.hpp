@@ -1,7 +1,7 @@
 #pragma once
 
 #define CL_HPP_TARGET_OPENCL_VERSION 200 // OpenCL 2.0
-#include <CL/cl.hpp>
+#include <CL/opencl.hpp>
 
 #include <iostream>
 #include <fstream>
