@@ -45,8 +45,9 @@ int main()
     cl::Platform default_platform = available_platforms.at(0);
 
     // Check available GPU devices
-    std::vector<cl::Device> available_devices;
+    std::vector<cl::Device> available_devices, available_cpus;
     default_platform.getDevices(CL_DEVICE_TYPE_GPU, &available_devices);
+    default_platform.getDevices(CL_DEVICE_TYPE_CPU, &available_cpus);
 
     if (available_devices.size() == 0)
     {
@@ -57,6 +58,11 @@ int main()
     std::cout << "Available GPUs in platform '" << default_platform.getInfo<CL_PLATFORM_NAME>() << "':" << std::endl;
     for (auto &i : available_devices)
     {
+        std::cout << "\t- " << i.getInfo<CL_DEVICE_NAME>() << std::endl;
+    }
+    
+    std::cout << "Available CPUs in platform '" << default_platform.getInfo<CL_PLATFORM_NAME>() << "':" << std::endl;
+    for (auto &i : available_cpus)    {
         std::cout << "\t- " << i.getInfo<CL_DEVICE_NAME>() << std::endl;
     }
 
