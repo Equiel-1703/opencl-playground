@@ -1,6 +1,8 @@
 #pragma once
 
-#include <CL/cl.h>
+#define CL_HPP_TARGET_OPENCL_VERSION 200 // OpenCL 2.0
+
+#include <CL/opencl.hpp>
 #include <iostream>
 
 #define CHECK_ERROR(err_id) check_error(err_id, __LINE__, __FILE__)
