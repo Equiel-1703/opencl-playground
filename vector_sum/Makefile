@@ -1,7 +1,7 @@
 BUILD_DIR = build
 
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++17
+CXXFLAGS = -Wall -Wextra -std=c++11
 LINKFLAGS = -lOpenCL
 SRC = $(wildcard *.cpp)
 BIN = $(SRC:%.cpp=$(BUILD_DIR)/%.o)
