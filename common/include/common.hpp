@@ -11,6 +11,6 @@ static void check_error(cl_int err, int line, const char *file)
 {
     if (err != CL_SUCCESS)
     {
-        std::cerr << "ERROR (" << file << " at line" << line << "): " << err << std::endl;
+        std::cerr << "ERROR (" << file << " at line " << line << "): " << err << std::endl;
     }
 }
