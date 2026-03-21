@@ -63,7 +63,7 @@ int main()
     // Selecting device
     cl::Device default_device = available_devices.at(0);
 
-    std::cout << "Using '" << default_device.getInfo<CL_DEVICE_NAME>() << "' of platform '" << default_device.getInfo<CL_DEVICE_PLATFORM>().getInfo<CL_PLATFORM_NAME>() << "'" << std::endl;
+    std::cout << "Using '" << default_device.getInfo<CL_DEVICE_NAME>() << "' of platform '" << default_platform.getInfo<CL_PLATFORM_NAME>() << "'" << std::endl;
 
     // Creating context with selected device
     cl::Context context(default_device);
