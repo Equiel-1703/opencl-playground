@@ -3,7 +3,7 @@ SRC_FOLDER := ./src
 INCLUDES := -I./include
 
 CXX := g++
-CXXFLAGS := -Wall -Wextra -std=c++17 $(INCLUDES)
+CXXFLAGS := -Wall -Wextra -std=c++11 $(INCLUDES)
 LINKERFLAGS := -lOpenCL
 SRC := $(wildcard $(SRC_FOLDER)/*.cpp)
 OBJ := $(SRC:$(SRC_FOLDER)/%.cpp=$(BIN_FOLDER)/%.o)
