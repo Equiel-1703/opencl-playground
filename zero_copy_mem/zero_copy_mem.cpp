@@ -140,22 +140,77 @@ int main()
     const size_t buffer_len = 1024;
     const size_t buffer_size_bytes = sizeof(int) * buffer_len;
 
-    int *host_arr = new int[buffer_len];
-    int *host_result = new int[buffer_len];
+    cl::Buffer device_input(cpu_context, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, buffer_size_bytes, nullptr, &err);
+    CHECK_ERROR(err);
+    cl::Buffer device_result(cpu_context, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, buffer_size_bytes, nullptr, &err);
+    CHECK_ERROR(err);
+
+    // Mapping input buffer to host memory. This gives us a pointer that we can read and write to.
+    // These changes will be reflected in the OpenCL buffer without needing an explicit copy.
+    int* host_input = static_cast<int*>(cpu_queue.enqueueMapBuffer(
+        device_input, 
+        CL_TRUE,                            // Block until mapping is ready
+        CL_MAP_WRITE | CL_MAP_READ,         // We will write input and read it back for verification
+        0,                                  // Start at the beginning of the buffer
+        buffer_size_bytes,                  // Map the entire buffer
+        nullptr, nullptr, &err
+    ));
+    CHECK_ERROR(err);
 
     // Check memory alignment of host_arr and host_result
-    uintptr_t addr_host_arr = reinterpret_cast<uintptr_t>(host_arr);
-    uintptr_t addr_host_result = reinterpret_cast<uintptr_t>(host_result);
+    uintptr_t addr_host_arr = reinterpret_cast<uintptr_t>(host_input);
 
     if (addr_host_arr % align_bytes == 0)
     {
-        std::cout << "host_arr is properly aligned at address: " << host_arr << std::endl;
+        std::cout << "host_input is properly aligned at address: " << host_input << std::endl;
     }
     else
     {
-        std::cerr << "Warning: host_arr is NOT properly aligned! Address: " << host_arr << std::endl;
+        std::cerr << "Warning: host_input is NOT properly aligned! Address: " << host_input << std::endl;
     }
 
+    // Initializing input data
+    for (size_t i = 0; i < buffer_len; i++)
+    {
+        host_input[i] = static_cast<int>(i) + 1;
+    }
+
+    // Print first 10 input values
+    std::cout << "\nFirst 10 input values:" << std::endl;
+    for(size_t i = 0; i < 10; i++)
+    {
+        std::cout << "* host_arr[" << i << "] = " << host_input[i] << std::endl;
+    }
+    std::cout << std::endl;
+
+    // Unmap the input buffer now that we are done writing and reading. This returns control of the memory back to OpenCL.
+    CHECK_ERROR(cpu_queue.enqueueUnmapMemObject(device_input, host_input));
+
+    // Setting kernel arguments
+    kernel.setArg(0, device_input);
+    kernel.setArg(1, device_result);
+    kernel.setArg(2, static_cast<int>(buffer_len));
+
+    std::cout << "Launching kernel in CPU..." << std::endl;
+
+    // Launching kernel in CPU
+    CHECK_ERROR(cpu_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(buffer_len), cl::NullRange));
+
+    // Now we will map the output buffer to read the results back on the host.
+    // CL_TRUE makes this a blocking call, meaning it will automatically 
+    // wait for the kernel to finish executing before it returns the pointer.
+    int* host_result = static_cast<int*>(cpu_queue.enqueueMapBuffer(
+        device_result, 
+        CL_TRUE,              // Block until kernel is done
+        CL_MAP_READ,          // We only need to read the output
+        0,                    // Start at the beginning of the buffer
+        buffer_size_bytes,    // Map the entire buffer
+        nullptr, nullptr, &err
+    ));
+    CHECK_ERROR(err);
+
+    // Check memory alignment of host_result
+    uintptr_t addr_host_result = reinterpret_cast<uintptr_t>(host_result);
     if (addr_host_result % align_bytes == 0)
     {
         std::cout << "host_result is properly aligned at address: " << host_result << std::endl;
@@ -165,72 +220,19 @@ int main()
         std::cerr << "Warning: host_result is NOT properly aligned! Address: " << host_result << std::endl;
     }
 
-    // Initializing input data
-    for (size_t i = 0; i < buffer_len; i++)
-    {
-        host_arr[i] = static_cast<int>(i) + 1;
-    }
-
-    // Print first 10 input values
-    std::cout << "\nFirst 10 input values:" << std::endl;
-    for(size_t i = 0; i < 10; i++)
-    {
-        std::cout << "* host_arr[" << i << "] = " << host_arr[i] << std::endl;
-    }
-    std::cout << std::endl;
-
-    // Creating OpenCL buffers with CL_MEM_USE_HOST_PTR to enable zero-copy
-    cl::Buffer device_input(cpu_context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, buffer_size_bytes, host_arr, &err);
-    CHECK_ERROR(err);
-    cl::Buffer device_output(cpu_context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, buffer_size_bytes, host_result, &err);
-    CHECK_ERROR(err);
-
-    // Setting kernel arguments
-    kernel.setArg(0, device_input);
-    kernel.setArg(1, device_output);
-    kernel.setArg(2, static_cast<int>(buffer_len));
-
-    std::cout << "Launching kernel in CPU..." << std::endl;
-
-    // Launching kernel in CPU
-    CHECK_ERROR(cpu_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(buffer_len), cl::NullRange));
-
-    // 1. Map the buffer. 
-    // CL_TRUE makes this a blocking call, meaning it will automatically 
-    // wait for the kernel to finish executing before it returns the pointer.
-    int* mapped_result = static_cast<int*>(cpu_queue.enqueueMapBuffer(
-        device_output, 
-        CL_TRUE,              // Block until kernel is done
-        CL_MAP_READ,          // We only need to read the output
-        0,                    // Start at the beginning of the buffer
-        buffer_size_bytes,    // Map the entire buffer
-        nullptr, nullptr, &err
-    ));
-    CHECK_ERROR(err);
-
-    // Optional: Let's prove that zero-copy worked!
-    if (mapped_result == host_result) {
-        std::cout << "(Success: mapped_result points to the exact same memory as host_result!)" << std::endl;
-    }
-
-    // 2. Print the results. 
-    // It is safest to use the mapped_result pointer that OpenCL handed back to us.
+    // Print the results. 
     std::cout << "\nFirst 10 results after kernel run:" << std::endl;
     for(size_t i = 0; i < 10; i++)
     {
-        std::cout << "* mapped_result[" << i << "] = " << mapped_result[i] << std::endl;
+        std::cout << "* mapped_result[" << i << "] = " << host_result[i] << std::endl;
     }
     std::cout << std::endl;
 
-    // 3. Unmap the buffer now that we are done looking at it.
-    CHECK_ERROR(cpu_queue.enqueueUnmapMemObject(device_output, mapped_result));
+    // 3. Unmap the buffer now that we are done reading it.
+    CHECK_ERROR(cpu_queue.enqueueUnmapMemObject(device_result, host_result));
 
-    // Best practice: ensure the unmap finishes before we hit delete[]
+    // Ensure all operations are finished before exiting
     cpu_queue.finish(); 
-    // =====================================================================
-
-    delete[] host_arr;
-    delete[] host_result;
 
     return EXIT_SUCCESS;
 }
