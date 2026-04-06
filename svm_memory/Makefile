@@ -1,0 +1,24 @@
+BUILD_DIR = build
+
+CXX = g++
+CXXFLAGS = -Wall -Wextra -std=c++11
+LINKFLAGS = -lOpenCL
+SRC = $(wildcard *.cpp)
+BIN = $(SRC:%.cpp=$(BUILD_DIR)/%.o)
+LINK_BINS = $(wildcard ../common/bin/*.o)
+
+TARGET = $(BUILD_DIR)/svm_memory.out
+
+all: $(BUILD_DIR) $(BIN) $(TARGET)
+
+$(TARGET): $(BIN)
+	$(CXX) $(CXXFLAGS) -o $@ $(BIN) $(LINK_BINS) $(LINKFLAGS)
+
+$(BUILD_DIR)/%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@ $(LINKFLAGS)
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+clean:
+	rm -f $(BUILD_DIR)/*
